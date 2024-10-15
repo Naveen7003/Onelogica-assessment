@@ -35,6 +35,6 @@ router.delete("/review/:reviewId", isAuthenticated, deletePerformanceReview);
 router.put("/review/:reviewId", isAuthenticated, updatePerformanceReview); // Update a performance review
 
 //put manageleave
-router.put("/manager/leave/manage", isAuthenticated, manageLeave);
+router.put("/leave/manage", isAuthenticated, manageLeave);
 
 module.exports = router;

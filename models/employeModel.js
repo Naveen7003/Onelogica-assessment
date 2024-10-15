@@ -36,7 +36,7 @@ const employeModel = new mongoose.Schema({
        },
        performanceHistory: [
         {
-          reviewDate: { type: Date },
+          reviewDate: { type: Date, default : Date.now },
           rating: { type: Number }, // Rating system: 1 to 5
           feedback: { type: String },
         },
@@ -55,14 +55,14 @@ const employeModel = new mongoose.Schema({
       },
       attendance: {
         checkIns: [{
-          date: { type: Date, required: true },
+          date: { type: Date, required: true, default: Date.now },
           status: { type: String, enum: ['Present', 'Absent', 'Late'], default: 'Present' } // Example statuses
         }],
       },
       overtime: [
         {
           type: { type: String, enum: ['Regular', 'Holiday', 'Weekend'], required: true }, // Overtime type
-          date: { type: Date, required: true }, // Overtime date
+          date: { type: Date, required: true, default:Date.now }, // Overtime date
           hours: { type: Number, required: true }, // Overtime hours worked
         },
       ],

@@ -37,21 +37,31 @@ exports.getEmployeeList = catchAsyncErrors(async (req, res, next) => {
 // Add performance review
 exports.addPerformanceReview = catchAsyncErrors(async (req, res, next) => {
     const { reviewDate, rating, feedback } = req.body;
+    
+    // Find the manager (who is adding the review)
+    const manager = await managerModel.findById(req.id);
+    if (!manager) {
+        return next(new ErrorHandler("Manager not found", 404));
+    }
+
+    // Find the employee to ensure the review is for a valid employee
     const employee = await employeeModel.findById(req.params.employeeId);
     if (!employee) {
         return next(new ErrorHandler("Employee not found", 404));
     }
 
-    employee.performanceReviews.push({
-        manager: req.user.id,
+    // Add the performance review to the manager's schema
+    manager.performanceReviews.push({
+        employee: req.params.employeeId,
         reviewDate,
         rating,
         feedback,
     });
 
-    await employee.save();
+    await manager.save({ validateModifiedOnly: true });
     res.status(200).json({ success: true, message: "Review added successfully" });
 });
+
 
 // View performance reviews of an employee
 exports.viewPerformanceReviews = catchAsyncErrors(async (req, res, next) => {
@@ -65,42 +75,49 @@ exports.viewPerformanceReviews = catchAsyncErrors(async (req, res, next) => {
 
 // Delete a performance review
 exports.deletePerformanceReview = catchAsyncErrors(async (req, res, next) => {
-    const employee = await employeeModel.findOne({ "performanceReviews._id": req.params.reviewId });
-    if (!employee) {
+    const manager = await managerModel.findOne({ "performanceReviews._id": req.params.reviewId });
+
+    if (!manager) {
         return next(new ErrorHandler("Review not found", 404));
     }
 
-    employee.performanceReviews = employee.performanceReviews.filter((review) => review._id.toString() !== req.params.reviewId);
-    await employee.save();
+    // Filter out the review to delete it
+    manager.performanceReviews = manager.performanceReviews.filter((review) => review._id.toString() !== req.params.reviewId);
+
+    await manager.save({ validateModifiedOnly: true });
     res.status(200).json({ success: true, message: "Review deleted successfully" });
 });
 
 // Update a performance review
 exports.updatePerformanceReview = catchAsyncErrors(async (req, res, next) => {
     const { rating, feedback } = req.body;
-    const employee = await employeeModel.findOne({ "performanceReviews._id": req.params.reviewId });
+    const manager = await managerModel.findOne({ "performanceReviews._id": req.params.reviewId });
 
-    if (!employee) {
+    if (!manager) {
         return next(new ErrorHandler("Review not found", 404));
     }
 
-    const review = employee.performanceReviews.find((review) => review._id.toString() === req.params.reviewId);
+    // Find the specific review to update
+    const review = manager.performanceReviews.find((review) => review._id.toString() === req.params.reviewId);
+    
     if (!review) {
         return next(new ErrorHandler("Review not found", 404));
     }
 
+    // Update the review fields
     review.rating = rating || review.rating;
     review.feedback = feedback || review.feedback;
 
-    await employee.save();
+    await manager.save({ validateModifiedOnly: true });
     res.status(200).json({ success: true, message: "Review updated successfully" });
 });
+
 
 // Manager approves or rejects leave
 exports.manageLeave = catchAsyncErrors(async (req, res, next) => {
     const { employeeId, leaveId, action } = req.body; // action can be 'approve' or 'reject'
     
-    const employe = await employeModel.findById(employeeId);
+    const employe = await employeeModel.findById(employeeId);
     if (!employe) {
       return next(new ErrorHandler("Employee not found", 404));
     }
