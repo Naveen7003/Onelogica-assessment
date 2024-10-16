@@ -10,7 +10,7 @@ const employeModel = new mongoose.Schema({
         maxLength:[20,"First Name should not exceed more than 20 characters"],
         },
         contact:{
-         type:String,
+         type:Number,
          required:[true,"Contact is required"],
          maxLength:[10,"Contact should not exceed more than 10 characters"],
          minLength:[10,"Contact should be atleast more than 10 characters"],
@@ -78,6 +78,11 @@ const employeModel = new mongoose.Schema({
           },
         ],
       },
+      manager: {
+        type: String,
+        ref: 'Employe',
+        required: true
+    },
     createdAt: { type: Date, default: Date.now },
   });
   

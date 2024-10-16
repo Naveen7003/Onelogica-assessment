@@ -10,10 +10,11 @@ const { homepage,
     viewAttendance,
     uploadDocument,
     fetchDocument,
-    deleteDocument,
+    deleteDocument
     } = require("../controllers/employeController");
 const { isAuthenticated } = require("../middlewares/auth");
 const router = express.Router();
+const upload = require('../multerConfig');
 
 //Get /homepage
 router.get("/", homepage)
@@ -34,7 +35,7 @@ router.get("/profile", isAuthenticated, employeProfile);
 router.get("/attendance", isAuthenticated, viewAttendance);
 
 // Post /employe/attendance/mark
-router.post("/attendance/mark", isAuthenticated, markAttendance);
+router.post("/attendance/mark", isAuthenticated, markAttendance );
 
 // Post /employe/leave
 router.post("/leave", isAuthenticated, applyLeave);
@@ -42,13 +43,14 @@ router.post("/leave", isAuthenticated, applyLeave);
 // Get /employe/leavehistory
 router.get("/leavehistory", isAuthenticated, viewLeaveHistory);
 
-// Post /employe/document/upload
-router.post("/document/upload", isAuthenticated, uploadDocument);
+// POST /employe/document/upload - Upload Document
+router.post('/document/upload', upload.single('document'), uploadDocument);
 
-// Get /employe/document/:id
-router.get("/document/:id", isAuthenticated, fetchDocument);
+// GET /employe/document/:id - Fetch Document
+router.get('/document/:id', fetchDocument);
 
-// Delete /employe/document/:id
-router.delete("/document/:id", isAuthenticated, deleteDocument);
+// DELETE /employe/document/:id - Delete Document
+router.delete('/document/:id', deleteDocument);
+
 
 module.exports = router;

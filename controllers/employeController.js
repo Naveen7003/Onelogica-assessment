@@ -2,6 +2,8 @@ const { catchAsyncErrors } = require("../middlewares/catchAsyncError");
 const employeModel = require("../models/employeModel");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { sendtoken } = require("../utils/SendToken");
+const managerModel = require("../models/managerModel")
+const haversine = require('haversine-distance');
 
 // GET Homepage
 exports.homepage = catchAsyncErrors(async (req, res, next) => {
@@ -12,7 +14,7 @@ exports.homepage = catchAsyncErrors(async (req, res, next) => {
 exports.employesignup = catchAsyncErrors(async (req, res, next) => {
   const employe = await new employeModel(req.body).save();
   sendtoken(employe, 201, res);
-  res.status(201).json({ success: true, employe });
+  res.status(201).json({ success: true});
 });
 
 // POST /employe/signin - Employee Signin
@@ -32,13 +34,13 @@ exports.employesignin = catchAsyncErrors(async (req, res, next) => {
   sendtoken(employe, 200, res);
 });
 
-// POST /employe/signout - Employee Signout
+// POST /employe/signout - Employe Signout
 exports.employesignout = catchAsyncErrors(async (req, res, next) => {
   res.clearCookie("token"); // Assuming token is stored in cookies
   res.status(200).json({ success: true, message: "Successfully signed out" });
 });
 
-// GET /employe/profile - Employee Profile
+// GET /employe/profile - Employe Profile
 exports.employeProfile = catchAsyncErrors(async (req, res, next) => {
   const employe = await employeModel.findById(req.id).exec(); // Assuming req.user contains the authenticated user info
   if (!employe) {
@@ -65,20 +67,51 @@ exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({ success: true, employe });
 });
 
-// POST /employe/attendance/mark - Mark Attendance
+// Function to calculate if the employee is within the radius of officelocation
+const isWithinGeofence = (currentLocation, officeLocation, radius) => {
+  const distance = haversine(currentLocation, officeLocation);
+  return distance <= radius; // Return true if within radius, false otherwise
+};
+
 exports.markAttendance = catchAsyncErrors(async (req, res, next) => {
-  const { attendanceDate, status } = req.body;
+  const { attendanceDate, status, currentLatitude, currentLongitude } = req.body;
 
   const employe = await employeModel.findById(req.id);
   if (!employe) {
     return next(new ErrorHandler("Employee not found", 404));
   }
 
-  // Push attendance data into checkIns array
+  // Find the manager to get the office location
+  const manager = await managerModel.findOne({ name: employe.manager });
+  if (!manager || !manager.officeLocation) {
+    return next(new ErrorHandler("Manager or office location not found", 404));
+  }
+
+  // Office location from the manager's model
+  const officeLocation = {
+    latitude: manager.officeLocation.latitude,
+    longitude: manager.officeLocation.longitude,
+  };
+
+  // Employee's current location data (received from the request)
+  const currentLocation = {
+    latitude: currentLatitude,
+    longitude: currentLongitude,
+  };
+
+  // Check if the current location is within the 100-meter geofence radius
+  const radiusInMeters = 100; // Set the radius to 100 meters
+  const isInsideGeofence = isWithinGeofence(currentLocation, officeLocation, radiusInMeters);
+
+  if (!isInsideGeofence) {
+    return res.status(403).json({ success: false, message: "You are not within the allowed geofence to mark attendance." });
+  }
+
+  // If within the geofence, mark attendance
   employe.attendance.checkIns.push({ date: attendanceDate, status });
   await employe.save({ validateModifiedOnly: true });
 
-  res.status(200).json({ success: true, message: "Attendance marked" });
+  res.status(200).json({ success: true, message: "Attendance marked successfully." });
 });
 
 // GET /employe/attendance - View Attendance
@@ -125,21 +158,20 @@ exports.viewLeaveHistory = catchAsyncErrors(async (req, res, next) => {
 
 
 
-// POST /employe/document/upload - Upload Document
 exports.uploadDocument = catchAsyncErrors(async (req, res, next) => {
-  const employe = await employeModel.findById(req.id);
+  const employe = await employeModel.findById(req.user.id);
   if (!employe) {
-    return next(new ErrorHandler("Employee not found", 404));
+      return next(new ErrorHandler("Employee not found", 404));
   }
 
   const { documentType } = req.body; // E.g., 'resume' or 'certification'
   
   if (documentType === 'resume') {
-    employe.documents.resume = { filename: 'resume', path: req.body.path }; // Storing resume
+      employe.documents.resume = { filename: req.file.filename, path: req.file.path }; // Storing resume
   } else if (documentType === 'certification') {
-    employe.documents.certifications.push({ filename: req.body.filename, path: req.body.path }); // Storing certification
+      employe.documents.certifications.push({ filename: req.file.filename, path: req.file.path }); // Storing certification
   } else {
-    return next(new ErrorHandler("Invalid document type", 400));
+      return next(new ErrorHandler("Invalid document type", 400));
   } 
   await employe.save({ validateModifiedOnly: true });
 
@@ -154,19 +186,17 @@ exports.fetchDocument = catchAsyncErrors(async (req, res, next) => {
   
   let document;
   if (documentType === 'resume') {
-    document = employe.documents.resume;
+      document = employe.documents.resume;
   } else if (documentType === 'certification') {
-    document = employe.documents.certifications.find((cert) => cert._id.toString() === req.params.id);
+      document = employe.documents.certifications.find((cert) => cert._id.toString() === req.params.id);
   }
 
   if (!document) {
-    return next(new ErrorHandler("Document not found", 404));
+      return next(new ErrorHandler("Document not found", 404));
   }
 
   res.status(200).json({ success: true, document });
 });
-
-
 
 // DELETE /employe/document/:id - Delete Document
 exports.deleteDocument = catchAsyncErrors(async (req, res, next) => {
@@ -175,21 +205,20 @@ exports.deleteDocument = catchAsyncErrors(async (req, res, next) => {
   const { documentType } = req.body; // E.g., 'resume' or 'certification'
   
   if (documentType === 'resume') {
-    employe.documents.resume = null; // Deleting the resume
+      employe.documents.resume = null; // Deleting the resume
   } else if (documentType === 'certification') {
-    const documentIndex = employe.documents.certifications.findIndex((cert) => cert._id.toString() === req.params.id);
-    
-    if (documentIndex === -1) {
-      return next(new ErrorHandler("Document not found", 404));
-    }
+      const documentIndex = employe.documents.certifications.findIndex((cert) => cert._id.toString() === req.params.id);
+      
+      if (documentIndex === -1) {
+          return next(new ErrorHandler("Document not found", 404));
+      }
 
-    employe.documents.certifications.splice(documentIndex, 1); // Deleting the certification
+      employe.documents.certifications.splice(documentIndex, 1); // Deleting the certification
   } else {
-    return next(new ErrorHandler("Invalid document type", 400));
+      return next(new ErrorHandler("Invalid document type", 400));
   }
 
   await employe.save();
 
   res.status(200).json({ success: true, message: "Document deleted" });
 });
-

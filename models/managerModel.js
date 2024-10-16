@@ -35,6 +35,11 @@ const managerModel = new mongoose.Schema({
           feedback: { type: String },
         },
     ],
+    officeLocation: {
+        latitude: { type: Number, required: true }, // Office latitude
+        longitude: { type: Number, required: true }, // Office longitude
+        radius: { type: Number, default: 100 }, // Geofence radius in meters
+    },
 }, {timestamps:true})
 
 managerModel.pre("save", function(){

@@ -1,6 +1,12 @@
 require("dotenv").config({path:"./.env"})
 const express = require("express");
 const app = express()
+const path = require('path');
+const fs = require('fs');
+const cors = require("cors");
+
+app.use(cors({ origin: 'http://localhost:5173', credentials: true}));
+console.log("cors setup done")
 
 //dbconnection
 require('./models/database').connnectDatabase();
@@ -12,6 +18,21 @@ app.use(logger("tiny"))
 //bodyParser
 app.use(express.json());
 app.use(express.urlencoded({extended: false}))
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
+
+// Create uploads and documents folders if they don't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+const documentsDir = path.join(uploadsDir, 'documents');
+
+// Create the 'uploads' directory if it doesn't exist
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+
+// Create the 'documents' directory if it doesn't exist
+if (!fs.existsSync(documentsDir)) {
+    fs.mkdirSync(documentsDir);
+}
 
 //session and cookie
 const session = require("express-session")
@@ -38,6 +59,5 @@ app.all("*", (req, res, next)=> {      //isme error ane ke baad or hamare pass b
     next(new ErrorHandler(`Requested URL Not Found ${req.url}`, 404))
 })
 app.use(generatedErrors)
-
 
 app.listen(process.env.PORT, console.log(`sever is running on port ${process.env.PORT}`))
