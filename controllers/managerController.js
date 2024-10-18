@@ -12,6 +12,7 @@ exports.homepage = catchAsyncErrors(async(req, res, next) => {
 // Signup
 exports.managerSignup = catchAsyncErrors(async(req, res ,next) => {
     const Manager = await new managerModel(req.body).save();
+    sendtoken(Manager, 200, res);
     res.status(201).json(Manager);
 });
 
@@ -28,9 +29,18 @@ exports.managerSignin = catchAsyncErrors(async(req, res, next) => {
     sendtoken(Manager, 200, res);
 });
 
+exports.currentManager = catchAsyncErrors(async (req,res,next) =>{
+    const Manager = await managerModel.findById(req.id).exec();
+    if (!Manager) {
+      return next(new ErrorHandler("Employee not found", 404));
+    }
+    res.status(200).json({ success: true, Manager});
+});
+
 // Get all employees (Viewable only by manager)
 exports.getEmployeeList = catchAsyncErrors(async (req, res, next) => {
-    const employees = await employeeModel.find();
+    const manager = await managerModel.findById(req.id).exec()
+    const employees = await employeeModel.find({ manager : manager.username}).exec();
     res.status(200).json({ success: true, employees });
 });
 
@@ -51,67 +61,15 @@ exports.addPerformanceReview = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Add the performance review to the manager's schema
-    manager.performanceReviews.push({
-        employee: req.params.employeeId,
+    employee.performanceHistory.push({
         reviewDate,
         rating,
         feedback,
     });
 
-    await manager.save({ validateModifiedOnly: true });
+    await employee.save({ validateModifiedOnly: true });
     res.status(200).json({ success: true, message: "Review added successfully" });
 });
-
-
-// View performance reviews of an employee
-exports.viewPerformanceReviews = catchAsyncErrors(async (req, res, next) => {
-    const employee = await employeeModel.findById(req.params.employeeId).populate("performanceReviews.manager", "username");
-    if (!employee) {
-        return next(new ErrorHandler("Employee not found", 404));
-    }
-
-    res.status(200).json({ success: true, reviews: employee.performanceReviews });
-});
-
-// Delete a performance review
-exports.deletePerformanceReview = catchAsyncErrors(async (req, res, next) => {
-    const manager = await managerModel.findOne({ "performanceReviews._id": req.params.reviewId });
-
-    if (!manager) {
-        return next(new ErrorHandler("Review not found", 404));
-    }
-
-    // Filter out the review to delete it
-    manager.performanceReviews = manager.performanceReviews.filter((review) => review._id.toString() !== req.params.reviewId);
-
-    await manager.save({ validateModifiedOnly: true });
-    res.status(200).json({ success: true, message: "Review deleted successfully" });
-});
-
-// Update a performance review
-exports.updatePerformanceReview = catchAsyncErrors(async (req, res, next) => {
-    const { rating, feedback } = req.body;
-    const manager = await managerModel.findOne({ "performanceReviews._id": req.params.reviewId });
-
-    if (!manager) {
-        return next(new ErrorHandler("Review not found", 404));
-    }
-
-    // Find the specific review to update
-    const review = manager.performanceReviews.find((review) => review._id.toString() === req.params.reviewId);
-    
-    if (!review) {
-        return next(new ErrorHandler("Review not found", 404));
-    }
-
-    // Update the review fields
-    review.rating = rating || review.rating;
-    review.feedback = feedback || review.feedback;
-
-    await manager.save({ validateModifiedOnly: true });
-    res.status(200).json({ success: true, message: "Review updated successfully" });
-});
-
 
 // Manager approves or rejects leave
 exports.manageLeave = catchAsyncErrors(async (req, res, next) => {

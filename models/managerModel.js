@@ -19,6 +19,7 @@ const managerModel = new mongoose.Schema({
     password: {
         type:String,
         required:[true , "Password is required!"],
+        select: false,
         // match: [ ,""],
         maxLength: [15, "Password must be less than 15 Characters"],
         minLength: [6, "Password should have atleast 6 Characters"],
@@ -27,17 +28,9 @@ const managerModel = new mongoose.Schema({
         type: String,
         default: "manager",
       },
-    performanceReviews: [
-        {
-          employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employe' },
-          reviewDate: { type: Date },
-          rating: { type: Number },
-          feedback: { type: String },
-        },
-    ],
     officeLocation: {
-        latitude: { type: Number, required: true }, // Office latitude
-        longitude: { type: Number, required: true }, // Office longitude
+        latitude: { type: Number, default:23.2599333  }, // Office latitude
+        longitude: { type: Number,default: 77.412615 }, // Office longitude
         radius: { type: Number, default: 100 }, // Geofence radius in meters
     },
 }, {timestamps:true})

@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require("cors");
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true}));
+app.use(cors({ origin: true, credentials: true}));
 console.log("cors setup done")
 
 //dbconnection

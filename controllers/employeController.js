@@ -40,6 +40,14 @@ exports.employesignout = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({ success: true, message: "Successfully signed out" });
 });
 
+exports.currentEmploye = catchAsyncErrors(async (req,res,next) =>{
+  const employe = await employeModel.findById(req.id).exec();
+  if (!employe) {
+    return next(new ErrorHandler("Employee not found", 404));
+  }
+  res.status(200).json({ success: true, employe });
+});
+
 // GET /employe/profile - Employe Profile
 exports.employeProfile = catchAsyncErrors(async (req, res, next) => {
   const employe = await employeModel.findById(req.id).exec(); // Assuming req.user contains the authenticated user info
@@ -82,7 +90,7 @@ exports.markAttendance = catchAsyncErrors(async (req, res, next) => {
   }
 
   // Find the manager to get the office location
-  const manager = await managerModel.findOne({ name: employe.manager });
+  const manager = await managerModel.findOne({ username: employe.manager });
   if (!manager || !manager.officeLocation) {
     return next(new ErrorHandler("Manager or office location not found", 404));
   }

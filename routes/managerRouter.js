@@ -7,6 +7,7 @@ const { homepage,
     viewPerformanceReviews, 
     deletePerformanceReview, 
     updatePerformanceReview,
+    currentManager,
     manageLeave } = require("../controllers/managerController");
 const { isAuthenticated } = require("../middlewares/auth");
 const router = express.Router()
@@ -19,20 +20,13 @@ router.post("/signup", managerSignup);
 //Post Signin
 router.post("/signin", managerSignin);
 
+router.get("/currentManager", isAuthenticated, currentManager)
+
 //get employelist
 router.get("/employees", isAuthenticated, getEmployeeList); 
 
 //post performance and review
 router.post("/review/:employeeId", isAuthenticated, addPerformanceReview); 
-
-//get viewreviews
-router.get("/reviews/:employeeId", isAuthenticated, viewPerformanceReviews); 
-
-//delete review
-router.delete("/review/:reviewId", isAuthenticated, deletePerformanceReview);
-
-//put updatereview
-router.put("/review/:reviewId", isAuthenticated, updatePerformanceReview); // Update a performance review
 
 //put manageleave
 router.put("/leave/manage", isAuthenticated, manageLeave);

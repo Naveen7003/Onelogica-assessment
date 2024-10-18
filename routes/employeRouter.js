@@ -3,6 +3,7 @@ const { homepage,
     employesignup,
     employesignin,
     employesignout,
+    currentEmploye,
     employeProfile,
     markAttendance,
     applyLeave,
@@ -27,6 +28,9 @@ router.post("/signin", employesignin);
 
 //Post /employe/signout
 router.post("/signout", isAuthenticated, employesignout);
+
+//get currentemploye
+router.get("/currentEmploye", isAuthenticated, currentEmploye)
 
 //Get /employe/profile
 router.get("/profile", isAuthenticated, employeProfile);

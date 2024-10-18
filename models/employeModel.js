@@ -24,21 +24,20 @@ const employeModel = new mongoose.Schema({
         password: {
          type:String,
          required:[true, "password is required"],
+         select:false,
          maxLength:[15,"Password should not exceed more than 15 characters"],
          minLength:[3,"Password should have atleast 3 characters"],
          //match:[/^(?=.\d)(?=.[a-z])(?=.[A-Z])(?=.[^a-zA-Z0-9]).{8,1024}$/]
         },
         jobDetails: {
-         jobRole: { type: String },
-         department: { type: String },
-         salary: { type: Number },
-         hourlyRate: { type: Number }, // If applicable
+         jobRole: { type: String, default:"Developer" },
+         department: { type: String, default: "IT"},
        },
        performanceHistory: [
         {
-          reviewDate: { type: Date, default : Date.now },
+          reviewDate: { type: Date, default : Date.now, unique:true },
           rating: { type: Number }, // Rating system: 1 to 5
-          feedback: { type: String },
+          feedback: [{ type: String }],
         },
       ],
       documents: {
@@ -55,17 +54,10 @@ const employeModel = new mongoose.Schema({
       },
       attendance: {
         checkIns: [{
-          date: { type: Date, required: true, default: Date.now },
+          date: { type: Date,unique:true, default: Date.now },
           status: { type: String, enum: ['Present', 'Absent', 'Late'], default: 'Present' } // Example statuses
         }],
       },
-      overtime: [
-        {
-          type: { type: String, enum: ['Regular', 'Holiday', 'Weekend'], required: true }, // Overtime type
-          date: { type: Date, required: true, default:Date.now }, // Overtime date
-          hours: { type: Number, required: true }, // Overtime hours worked
-        },
-      ],
       leave: {
         totalLeave: { type: Number, default: 20 }, // e.g., 20 days of annual leave
         usedLeave: { type: Number, default: 0 },
@@ -80,7 +72,6 @@ const employeModel = new mongoose.Schema({
       },
       manager: {
         type: String,
-        ref: 'Employe',
         required: true
     },
     createdAt: { type: Date, default: Date.now },
