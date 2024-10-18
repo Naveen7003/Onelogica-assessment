@@ -1,14 +1,17 @@
 HR Management System
+
 An HR Management System where employees and managers can manage profiles, attendance, leave applications, and reviews efficiently. This system uses Geofencing for accurate attendance marking, and employees can upload their resumes or certifications. The platform uses Node.js, Express.js, MongoDB, React, Redux, JWT, and Multer.
 
 Features
+
 1. Employee Features:
 Sign up & Login: Secure JWT-based authentication.
 Profile Page: Employees can view their username, email, department, job title, rating, review, and manager's name.
 Attendance: Employees can mark their attendance, which is validated through Geofencing. Attendance will only be marked if the employee is within a 100-meter radius.
 Leave Application: Employees can apply for leave and view their total and remaining leave balances.
 Document Upload: Employees can upload resumes and certificates using Multer.
-2. Manager Features:
+
+3. Manager Features:
 Sign up & Login: Managers can sign up and login securely.
 Manage Employees: Managers can view all employees assigned to them.
 Review and Rating: Managers can give performance reviews and ratings to their employees.
@@ -59,10 +62,12 @@ Start the React application:
 bash
 Copy code
 npm start
+
 Multer Configuration for File Upload
 Employees can upload their resumes and certificates, which are saved on the server using Multer. The uploaded files are stored in the uploads/documents directory. Make sure the server has permission to write to the designated upload directory.
 
 API Endpoints
+
 Employee Routes
 POST /employe/signup: Employee signup.
 POST /employe/login: Employee login.
@@ -70,6 +75,7 @@ GET /employe/profile: Fetch employee profile data.
 POST /employe/attendance: Mark attendance (Geofencing check required).
 POST /employe/leave/apply: Apply for leave.
 POST /employe/upload: Upload resume or certificate (via Multer).
+
 Manager Routes
 POST /manager/signup: Manager signup.
 POST /manager/login: Manager login.
