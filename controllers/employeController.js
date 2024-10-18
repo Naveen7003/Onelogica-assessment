@@ -167,7 +167,7 @@ exports.viewLeaveHistory = catchAsyncErrors(async (req, res, next) => {
 
 
 exports.uploadDocument = catchAsyncErrors(async (req, res, next) => {
-  const employe = await employeModel.findById(req.user.id);
+  const employe = await employeModel.findById(req.id);
   if (!employe) {
       return next(new ErrorHandler("Employee not found", 404));
   }
@@ -186,47 +186,3 @@ exports.uploadDocument = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({ success: true, message: "Document uploaded" });
 });
 
-// GET /employe/document/:id - Fetch Document
-exports.fetchDocument = catchAsyncErrors(async (req, res, next) => {
-  const employe = await employeModel.findById(req.user.id).select("documents");
-  
-  const { documentType } = req.query; // E.g., 'resume' or 'certification'
-  
-  let document;
-  if (documentType === 'resume') {
-      document = employe.documents.resume;
-  } else if (documentType === 'certification') {
-      document = employe.documents.certifications.find((cert) => cert._id.toString() === req.params.id);
-  }
-
-  if (!document) {
-      return next(new ErrorHandler("Document not found", 404));
-  }
-
-  res.status(200).json({ success: true, document });
-});
-
-// DELETE /employe/document/:id - Delete Document
-exports.deleteDocument = catchAsyncErrors(async (req, res, next) => {
-  const employe = await employeModel.findById(req.user.id);
-  
-  const { documentType } = req.body; // E.g., 'resume' or 'certification'
-  
-  if (documentType === 'resume') {
-      employe.documents.resume = null; // Deleting the resume
-  } else if (documentType === 'certification') {
-      const documentIndex = employe.documents.certifications.findIndex((cert) => cert._id.toString() === req.params.id);
-      
-      if (documentIndex === -1) {
-          return next(new ErrorHandler("Document not found", 404));
-      }
-
-      employe.documents.certifications.splice(documentIndex, 1); // Deleting the certification
-  } else {
-      return next(new ErrorHandler("Invalid document type", 400));
-  }
-
-  await employe.save();
-
-  res.status(200).json({ success: true, message: "Document deleted" });
-});

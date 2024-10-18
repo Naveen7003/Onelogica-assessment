@@ -42,7 +42,7 @@ const employeModel = new mongoose.Schema({
       ],
       documents: {
         resume: {
-          filename: { type: String, default: 'resume' }, // Not necessary unless you want to store it
+          filename: { type: String,  }, // Not necessary unless you want to store it
           path: { type: String } // Path or URL to the resume document
         },
         certifications: [

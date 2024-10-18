@@ -50,11 +50,6 @@ router.get("/leavehistory", isAuthenticated, viewLeaveHistory);
 // POST /employe/document/upload - Upload Document
 router.post('/document/upload', upload.single('document'), uploadDocument);
 
-// GET /employe/document/:id - Fetch Document
-router.get('/document/:id', fetchDocument);
-
-// DELETE /employe/document/:id - Delete Document
-router.delete('/document/:id', deleteDocument);
 
 
 module.exports = router;
