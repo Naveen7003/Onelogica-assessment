@@ -1,18 +1,22 @@
-const jwt = require("jsonwebtoken")
-const ErrorHandler = require("../utils/ErrorHandler")
-const {catchAsyncErrors} = require("./catchAsyncError")
+const jwt = require("jsonwebtoken");
+const UserModel = require("../models/UserModel");
+const ErrorHandler = require("../utils/ErrorHandler");
+const { catchAsyncErrors } = require("./catchAsyncError");
 
-exports.isAuthenticated = catchAsyncErrors(async(req, res, next) => {
-    const {token} = req.cookies;
-    if(!token) {
-        next(
-            new ErrorHandler("Please Login to Access the Resource", 401)
-        )
-    }
+exports.isAuthenticated = catchAsyncErrors(async (req, res, next) => {
+  const { token } = req.cookies;
 
-    const {id} = jwt.verify(token, process.env.JWT_SECRET)
-    req.id = id;
-    next()
-})
+  if (!token) {
+    return next(new ErrorHandler("Please login to access this resource", 401));
+  }
 
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await UserModel.findById(decoded.id); // Fetch full user from DB
 
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  req.user = user; // Attach full user object
+  next();
+});
