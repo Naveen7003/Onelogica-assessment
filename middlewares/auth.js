@@ -11,12 +11,12 @@ exports.isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   }
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  const user = await UserModel.findById(decoded.id); // Fetch full user from DB
+  const user = await UserModel.findById(decoded.id);
 
   if (!user) {
     return next(new ErrorHandler("User not found", 404));
   }
 
-  req.user = user; // Attach full user object
+  req.user = user;
   next();
 });

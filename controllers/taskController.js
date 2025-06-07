@@ -1,5 +1,6 @@
 const { catchAsyncErrors } = require("../middlewares/catchAsyncError");
-const Task = require("../models/TaskModel");
+const { default: Task } = require("../models/TaskModel");
+const UserModel = require("../models/UserModel");
 const ErrorHandler = require("../utils/ErrorHandler");
 
 // Homepage
@@ -9,53 +10,77 @@ exports.homepage = catchAsyncErrors(async (req, res, next) => {
 
 // CREATE Task - Admin Only
 exports.createTask = catchAsyncErrors(async (req, res, next) => {
+  // 1. Verify admin role (from your original task creation logic)
   if (req.user.role !== "admin") {
     return next(new ErrorHandler("Only admins can create tasks", 403));
   }
 
-  const task = await Task.create({
+  // 2. Create the task
+  const task = await new Task({
     ...req.body,
-    createdBy: req.user.id,
-  });
+    createdBy: req.user.id, // Add the creator reference
+  }).save();
 
-  res.status(201).json({ success: true, task });
+  // 3. Update the user's tasks array (similar to your order example)
+  const user = await UserModel.findByIdAndUpdate(
+    req.user.id,
+    { $push: { createdTasks: task._id } },
+    { new: true }
+  ).exec();
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    task,
+    message: "Task created successfully",
+  });
 });
 
 // READ All Tasks (Admin Only)
 exports.getAllTasks = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return next(new ErrorHandler("Only admins can view all tasks", 403));
-  }
-
   const page = parseInt(req.query.page) || 1;
-  const limit = 10;
+  const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  // Fetch all tasks (for sorting)
-  const tasksRaw = await Task.find().lean(); // .lean() gives plain JS objects
+  const query = req.user.role === "admin" ? {} : { assignedTo: req.user._id };
 
-  const priorityOrder = {
-    high: 1,
-    medium: 2,
-    low: 3,
-  };
+  // Step 1: Fetch from DB sorted by dueDate only
+  const [tasksRaw, totalTasks] = await Promise.all([
+    Task.find(query)
+      .populate("assignedTo", "username")
+      .sort({ dueDate: 1 }) // Sort only by dueDate in DB
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Task.countDocuments(query),
+  ]);
 
-  // Sort by priority and then by dueDate
-  const sortedTasks = tasksRaw.sort((a, b) => {
-    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-    if (priorityDiff !== 0) return priorityDiff;
-    return new Date(a.dueDate) - new Date(b.dueDate);
-  });
+  // Step 2: Custom priority order in JS
+  const priorityOrder = { high: 1, medium: 2, low: 3 };
 
-  // Paginate manually after sorting
-  const paginatedTasks = sortedTasks.slice(skip, skip + limit);
-  const totalPages = Math.ceil(sortedTasks.length / limit);
+  const tasks = tasksRaw
+    .sort((a, b) => {
+      const priorityDiff =
+        priorityOrder[a.priority] - priorityOrder[b.priority];
+      return priorityDiff;
+    })
+    .map((t) => ({
+      ...t,
+      assignedTo: t.assignedTo ? t.assignedTo.username : null,
+    }));
 
   res.status(200).json({
     success: true,
-    tasks: paginatedTasks,
-    totalPages,
-    currentPage: page,
+    tasks,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(totalTasks / limit),
+      totalTasks,
+      limit,
+    },
   });
 });
 
@@ -73,10 +98,6 @@ exports.getTaskById = catchAsyncErrors(async (req, res, next) => {
 
 // UPDATE Task - Admin Only
 exports.updateTask = catchAsyncErrors(async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return next(new ErrorHandler("Only admins can update tasks", 403));
-  }
-
   const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -112,20 +133,36 @@ exports.assignTask = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Only admins can assign tasks", 403));
   }
 
-  const { taskId, userId } = req.body;
+  const { taskIds, userId } = req.body; // Changed from taskId to taskIds (array)
 
-  const task = await Task.findById(taskId);
-  if (!task) return next(new ErrorHandler("Task not found", 404));
+  // Validate inputs
+  if (!Array.isArray(taskIds)) {
+    return next(new ErrorHandler("taskIds should be an array", 400));
+  }
 
+  if (taskIds.length === 0) {
+    return next(new ErrorHandler("No task IDs provided", 400));
+  }
+
+  // Check if user exists
   const user = await UserModel.findById(userId);
   if (!user) return next(new ErrorHandler("User not found", 404));
 
-  task.assignedTo = userId;
-  await task.save();
+  // Update all tasks at once
+  const result = await Task.updateMany(
+    { _id: { $in: taskIds } }, // Find all tasks with IDs in the array
+    { $set: { assignedTo: userId } } // Set assignedTo for all matched tasks
+  );
 
-  res
-    .status(200)
-    .json({ success: true, message: "Task assigned successfully", task });
+  if (result.modifiedCount === 0) {
+    return next(new ErrorHandler("No tasks were updated", 400));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `${result.modifiedCount} task(s) assigned successfully`,
+    modifiedCount: result.modifiedCount,
+  });
 });
 
 // DELETE Task - Admin Only

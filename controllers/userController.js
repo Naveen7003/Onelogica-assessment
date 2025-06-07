@@ -1,8 +1,7 @@
 const { catchAsyncErrors } = require("../middlewares/catchAsyncError");
 const ErrorHandler = require("../utils/ErrorHandler");
 const { sendtoken } = require("../utils/SendToken");
-const taskModel = require("../models/TaskModel");
-const haversine = require("haversine-distance");
+
 const UserModel = require("../models/UserModel");
 
 // GET Homepage
@@ -13,8 +12,8 @@ exports.homepage = catchAsyncErrors(async (req, res, next) => {
 // POST /employe/signup - Employee Signup
 exports.userSignup = catchAsyncErrors(async (req, res, next) => {
   const user = await new UserModel(req.body).save();
-  sendtoken(user, 201, res);
-  res.status(201).json({ success: true });
+  sendtoken(user, 200, res);
+  res.status(200).json({ success: true });
 });
 
 // POST /user/signin - user Signin
@@ -28,7 +27,7 @@ exports.userSignin = catchAsyncErrors(async (req, res, next) => {
     );
   }
 
-  const isMatch = await user.comparepassword(password);
+  const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     return next(new ErrorHandler("Invalid credentials", 401));
   }
@@ -40,4 +39,26 @@ exports.userSignin = catchAsyncErrors(async (req, res, next) => {
 exports.userSignout = catchAsyncErrors(async (req, res, next) => {
   res.clearCookie("token");
   res.status(200).json({ success: true, message: "Successfully signed out" });
+});
+
+exports.allUsers = catchAsyncErrors(async (req, res, next) => {
+  const users = await UserModel.find();
+  res.status(200).json({
+    success: true,
+    users,
+  });
+});
+
+// GET /user/current - Get logged-in user's details
+exports.getLoggedInUser = catchAsyncErrors(async (req, res, next) => {
+  const user = await UserModel.findById(req.user._id);
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
 });
